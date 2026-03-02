@@ -1,85 +1,89 @@
-# Function Requirements
+# Functional Requirements
 
 ## User Stories
 
-### User Story 1: Estimate Healthcare Costs
-##### As a patient I want to enter my location, insurance status, and a medical service or prescription so that I can see an estimated out-of-pocket cost before receiving care.
+### User Story 1: Analyze Tariff Exposure
+##### As a supply chain analyst, I want to upload supplier and product data so that I can understand how tariffs impact my costs.
 
 ### Acceptance Criteria:
 
-- *User can input location, insurance type, and service or medication*  
-- *System returns a cost estimate within 5 seconds*
-- *Estimate includes a short explanation of how the cost was calculated*
+- *User can upload supplier and product data in CSV format*
+- *System maps products to Harmonized System (HS) tariff codes*
+- *System calculates projected cost increases*
+- *Risk analysis results are returned within 5 seconds*
+- *Results include a short AI-generated explanation of risk impact*
 
+---
 
-### User Story 2: Compare Options
-##### As a patient I want to compare multiple providers or medication options so that I can choose the most affordable option.
+### User Story 2: Compare Supplier Risk
+##### As a procurement manager, I want to compare suppliers based on tariff exposure so that I can choose lower-risk sourcing options.
+
+### Acceptance Criteria:
+
+- *System displays at least two suppliers when available*
+- *Suppliers are assigned a quantitative risk score (0–100)*
+- *Suppliers are sortable by risk score*
+- *Highest-risk supplier is clearly highlighted*
+- *AI provides mitigation suggestions for high-risk suppliers*
+
+---
+
+### User Story 3: Run Tariff Simulation
+##### As an operations leader, I want to simulate tariff increases so that I can see projected cost and risk changes before making decisions.
 
 ### Acceptance Criteria:
 
-- *System displays at least two comparable options when available*  
-- *Results are sorted by estimated out-of-pocket cost*
-- *Lowest-cost option is visually highlighted*
+- *User can input a hypothetical tariff increase percentage*
+- *System recalculates projected costs in real time*
+- *Updated risk scores are displayed*
+- *AI generates a summary explaining the impact of the simulation*
+- *Simulation results are visually distinguishable from baseline results*
 
-### User Story 3: Find the Cheapest Medication Nearby
-##### As a patient I want to enter the name of a medication and my location so that I can find the cheapest place to buy it near me.
-
-
-
-### Acceptance Criteria:
- - *User can enter a medication name (brand or generic)*
-
-- *User can enter or auto-detect their location*
-
-- *System returns a list of nearby pharmacies or providers*
-
-- *Results include estimated out-of-pocket prices*
-
-- *Options are sorted from lowest to highest cost*
-
-- *The cheapest option is clearly highlighted*
-
+---
 
 ## Non-Functional Requirements
 
 ### Performance
 
-- Cost estimates must be generated within 5 seconds for 95% of requests
+- Risk analysis must be generated within 5 seconds for 95% of requests
+- The system must log and track all risk analysis requests for auditability.
+- Tariff data ingestion must update at least once per day
 
-- The system must support at least 50 concurrent users
+---
 
 ### Security & Privacy
-- No personal health information is stored permanently
 
+- Supplier and product data must not be shared with external AI services
 - All AI processing occurs locally using Ollama
+- All data transmission must use HTTPS encryption
 
+---
 
 ### Usability
-- Interface must be usable by non-technical users
 
+- Interface must be usable by non-technical business users
+- Risk scores must be visually represented (charts or color indicators)
+- Dashboard must function on modern desktop browsers
+
+---
 
 ## AI-Specific Requirements
-- AI must normalize user input (e.g., synonyms for services or drugs)
-- AI must generate human-readable explanations for estimates
+
+- AI must normalize ambiguous product descriptions
+- AI must generate human-readable explanations of tariff exposure
+- AI must provide actionable mitigation recommendations
+- AI must summarize simulation results in executive-friendly language
+
+---
 
 ## Prioritization
 
 ### Must Have
 
-- Cost estimation for services or prescriptions
-
+- Supplier/product upload functionality
+- Tariff data integration
+- Risk scoring model (0–100 scale)
 - Local AI processing via Ollama
+- Basic supplier comparison
 
-- Basic comparison of options
-
-### Should Have
-
-- Cost ranges when AI isn't sure about exact price 
-
-- Simple UI feedback for missing information
-
-### Nice to Have
-
-- Historical cost trends
-
-- Provider quality indicators
+---
