@@ -1,11 +1,13 @@
-# healthcare-app
-Healthcare Cost Estimator App
+# tariff-app
+AI-Powered Tariff & Supply Chain Risk Intelligence Platform
 
-A conversational AI-powered app that helps patients estimate out-of-pocket costs for medical services and prescription drugs.
+TradeShield integrates public tariff data with supplier and product information to model tariff exposure, calculate risk scores, and support scenario-based analysis.
 
-Features:
+Overview
+This application ingests public tariff data and combines it with internal supplier/product datasets to:
+-Calculate projected tariff cost impact
+-Generate quantitative risk scores
+-Support what-if tariff simulations
+-Produce AI-generated risk summaries
 
-- Estimates out-of-pocket costs for doctor visits, procedures, or prescriptions
-- Compares options to identify the lowest-cost
-- Provides clear and understandable explanations of cost estimates and recommendations
-- Integrates with Ollama AI platform for accurate and secure processing
+The system is designed for proactive tariff exposure analysis rather than reactive cost reporting.
