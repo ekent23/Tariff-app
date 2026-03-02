@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,15 +49,25 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="hidden text-sm sm:inline-flex">
-              Product tour
-            </Button>
-            <Button variant="outline" size="sm" className="text-sm">
-              Sign in
-            </Button>
-            <Button size="sm" className="text-sm">
-              Request demo
-            </Button>
+            <Link href="/sign-in">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden text-sm sm:inline-flex"
+              >
+                Product tour
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button variant="outline" size="sm" className="text-sm">
+                Sign in
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button size="sm" className="text-sm">
+                Request demo
+              </Button>
+            </Link>
           </div>
         </header>
 
@@ -79,12 +90,20 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <Button size="lg" className="px-7 text-base">
-                Upload tariff & supplier data
-              </Button>
-              <Button variant="outline" size="lg" className="border-zinc-700/80 bg-transparent text-base text-zinc-100">
-                Run a what-if scenario
-              </Button>
+              <Link href="/sign-in">
+                <Button size="lg" className="px-7 text-base">
+                  Upload tariff & supplier data
+                </Button>
+              </Link>
+              <Link href="/sign-in">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-zinc-700/80 bg-transparent text-base text-zinc-100"
+                >
+                  Run a what-if scenario
+                </Button>
+              </Link>
               <p className="w-full text-base text-zinc-400 sm:w-auto">
                 No agents needed: results in minutes, not months.
               </p>
@@ -188,8 +207,7 @@ export default function Home() {
                   cost on your top 40 SKUs above target thresholds, with three
                   critical suppliers driving 58% of exposure. The fastest
                   mitigation path combines alternative HS reclassification for 9
-                  SKUs with a staged shift of volume to secondary suppliers in
-                  VN and MX.”
+                  SKUs with a staged shift of volume to secondary suppliers in MX.”
                 </p>
               </div>
 
