@@ -3,6 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Node / Next
+node_modules/
+.next/
+tsconfig.tsbuildinfo
+
 # C extensions
 *.so
 
