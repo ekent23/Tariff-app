@@ -20,6 +20,9 @@ export default function AnalysisPage() {
   const [prompt, setPrompt] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const query =
     auth.user && !auth.isLoading
@@ -79,6 +82,86 @@ export default function AnalysisPage() {
         .link({ owner: auth.user.id }),
     );
     setActiveId(analysisId);
+  }
+
+  async function handleUploadCsv(event: FormEvent) {
+    event.preventDefault();
+    if (!auth.user || !uploadFile) {
+      return;
+    }
+    setIsUploading(true);
+    setUploadStatus("");
+
+    let analysisId = activeId;
+    const now = Date.now();
+    if (!analysisId) {
+      analysisId = id();
+      db.transact(
+        db.tx.analyses[analysisId]
+          .create({
+            title: "CSV upload",
+            createdAt: now,
+            updatedAt: now,
+            status: "in-progress",
+          })
+          .link({ owner: auth.user.id }),
+      );
+      setActiveId(analysisId);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      const response = await fetch("/api/upload-csv", {
+        method: "POST",
+        body: formData,
+      });
+
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(text || "CSV upload failed");
+      }
+
+      const result = JSON.parse(text) as {
+        message: string;
+        rows: number;
+        columns: string[];
+        sample?: string[][];
+      };
+
+      const summary = `CSV uploaded: ${result.rows} rows, ${result.columns.length} columns. Columns: ${result.columns.join(
+        ", ",
+      )}.`;
+
+      db.transact([
+        db.tx.messages[id()]
+          .create({
+            role: "assistant",
+            content: summary,
+            createdAt: Date.now(),
+          })
+          .link({ analysis: analysisId }),
+        db.tx.analyses[analysisId].update({
+          updatedAt: Date.now(),
+          summary,
+          status: "complete",
+        }),
+      ]);
+
+      setUploadStatus(result.message);
+      setUploadFile(null);
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error
+          ? uploadError.message
+          : "CSV upload failed.";
+      setUploadStatus(message);
+      db.transact(
+        db.tx.analyses[analysisId].update({ status: "error" }),
+      );
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   async function handleSendPrompt(event: FormEvent) {
@@ -310,6 +393,42 @@ export default function AnalysisPage() {
                   ))}
                 </div>
               </div>
+            </Card>
+
+            <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">
+              <form className="space-y-4" onSubmit={handleUploadCsv}>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="csv-upload"
+                    className="block text-sm font-medium text-zinc-200"
+                  >
+                    Upload CSV for analysis
+                  </label>
+                  <input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={(event) =>
+                      setUploadFile(event.target.files?.[0] ?? null)
+                    }
+                    className="block w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/20 file:px-3 file:py-1.5 file:text-emerald-100 hover:file:bg-emerald-500/30"
+                  />
+                </div>
+                {uploadStatus ? (
+                  <p className="text-sm text-zinc-300">{uploadStatus}</p>
+                ) : null}
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="submit"
+                    disabled={!uploadFile || isUploading}
+                  >
+                    {isUploading ? "Uploading..." : "Upload CSV"}
+                  </Button>
+                  <p className="text-xs text-zinc-500">
+                    We will parse the file and summarize columns + row count.
+                  </p>
+                </div>
+              </form>
             </Card>
 
             <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">

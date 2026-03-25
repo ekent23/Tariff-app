@@ -1,7 +1,9 @@
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import csv
+from io import StringIO
 
 class AnalyzeRequest(BaseModel):
     prompt: str
@@ -49,3 +51,27 @@ def analyze(request: AnalyzeRequest):
             "Review supplier contracts for tariff pass-through clauses",
         ],
     )
+
+@app.post("/upload-csv")
+async def upload_csv(file: UploadFile = File(...)):
+    content = await file.read()
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.reader(StringIO(text))
+    rows = list(reader)
+    if not rows:
+        return {"message": "Empty CSV", "rows": 0, "columns": []}
+
+    header = rows[0]
+    data_rows = rows[1:]
+    sample = data_rows[:5]
+
+    return {
+        "message": "CSV received",
+        "rows": len(data_rows),
+        "columns": header,
+        "sample": sample,
+    }
