@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = "backend/.env"
+        extra = "ignore"
 
 settings = Settings()

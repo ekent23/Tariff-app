@@ -7,16 +7,19 @@ const BACKEND_URL =
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const response = await fetch(`${BACKEND_URL}/upload-csv`, {
+    const payload = await request.json();
+    const response = await fetch(`${BACKEND_URL}/simulate`, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
 
     const text = await response.text();
     if (!response.ok) {
       return NextResponse.json(
-        { error: text || "CSV upload failed" },
+        { error: text || "Simulation failed" },
         { status: response.status },
       );
     }

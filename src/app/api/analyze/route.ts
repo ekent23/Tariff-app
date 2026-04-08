@@ -7,19 +7,16 @@ const BACKEND_URL =
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    const formData = await request.formData();
     const response = await fetch(`${BACKEND_URL}/analyze`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: formData,
     });
 
     const text = await response.text();
     if (!response.ok) {
       return NextResponse.json(
-        { error: text || "Analysis request failed" },
+        { error: text || "CSV analysis failed" },
         { status: response.status },
       );
     }
