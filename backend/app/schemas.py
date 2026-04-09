@@ -7,6 +7,8 @@ class ProductResult(BaseModel):
     origin_country: str
     annual_spend: float
     risk_score: float
+    tariff_rate: float
+    duty_exposure: float
     ai_advice: Optional[str] = None
 
 class SimulateRequest(BaseModel):

@@ -12,13 +12,21 @@ export async function POST(request: Request) {
       method: "POST",
       body: formData,
     });
+
     const text = await response.text();
     if (!response.ok) {
-      return NextResponse.json({ error: text }, { status: response.status });
+      return NextResponse.json(
+        { error: text || "CSV analysis failed" },
+        { status: response.status },
+      );
     }
+
     return NextResponse.json(JSON.parse(text));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "fetch failed";
+    return NextResponse.json(
+      { error: "fetch failed", detail: message },
+      { status: 500 },
+    );
   }
 }

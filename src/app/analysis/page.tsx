@@ -31,6 +31,7 @@ export default function AnalysisPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [csvFocus, setCsvFocus] = useState("");
   const [simulation, setSimulation] = useState<SimulationForm>({
     htsCode: "",
     originCountry: "",
@@ -48,13 +49,19 @@ export default function AnalysisPage() {
     auth.user && !auth.isLoading
       ? ({
           analyses: {
+            $: {
+              where: { "owner.id": auth.user.id },
+            },
             messages: {},
           },
         } as const)
       : null;
 
   const { data, isLoading, error } = db.useQuery(query);
-  const analyses = data?.analyses ?? [];
+  const analyses = useMemo(() => {
+    const list = data?.analyses ?? [];
+    return [...list].sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [data]);
 
   useEffect(() => {
     if (!auth.isLoading && !auth.user) {
@@ -78,7 +85,6 @@ export default function AnalysisPage() {
 
   const latestSummary = activeAnalysis?.summary;
 
-<<<<<<< Updated upstream
   useEffect(() => {
     if (activeAnalysis) {
       setRenameValue(activeAnalysis.title);
@@ -133,19 +139,6 @@ export default function AnalysisPage() {
           status: "draft",
         })
         .link({ owner: auth.user.id }),
-=======
-  function handleNewAnalysis() {
-    if (!auth.user) return;
-    const analysisId = id();
-    const now = Date.now();
-    db.transact(
-      db.tx.analyses[analysisId].create({
-        title: "New analysis",
-        createdAt: now,
-        updatedAt: now,
-        status: "draft",
-      }),
->>>>>>> Stashed changes
     );
     setActiveId(analysisId);
     return analysisId;
@@ -217,11 +210,6 @@ export default function AnalysisPage() {
     db.transact(txs);
   }
 
-  function handleDeleteAnalysis(analysisId: string) {
-    db.transact(db.tx.analyses[analysisId].delete());
-    if (activeId === analysisId) setActiveId(null);
-  }
-
   async function handleUploadCsv(event: FormEvent) {
     event.preventDefault();
     if (!auth.user || !uploadFile) return;
@@ -230,67 +218,27 @@ export default function AnalysisPage() {
 
     const analysisId = ensureAnalysis("CSV analysis");
     if (!analysisId) {
-<<<<<<< Updated upstream
       setIsUploading(false);
       return;
     }
 
     try {
-      const results = await requestCsvAnalysis({ file: uploadFile });
+      const results = await requestCsvAnalysis({
+        file: uploadFile,
+        focus: csvFocus,
+      });
       const summary = buildCsvSummary(results);
       const baseName = uploadFile.name.replace(/\.[^/.]+$/, "");
       const suggestedTitle = baseName ? `CSV: ${baseName}` : "CSV analysis";
       writeAssistantMessage(analysisId, summary, suggestedTitle);
       setUploadStatus("CSV analyzed successfully.");
-=======
-      analysisId = id();
-      db.transact(
-        db.tx.analyses[analysisId].create({
-          title: "CSV upload",
-          createdAt: now,
-          updatedAt: now,
-          status: "in-progress",
-        }),
-      );
-      setActiveId(analysisId);
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-      const response = await fetch("/api/upload-csv", {
-        method: "POST",
-        body: formData,
-      });
-
-      const text = await response.text();
-      if (!response.ok) throw new Error(text || "CSV upload failed");
-
-      const result = JSON.parse(text) as {
-        message: string;
-        rows: number;
-        columns: string[];
-        sample?: string[][];
-      };
-
-      const summary = `CSV uploaded: ${result.rows} rows, ${result.columns.length} columns. Columns: ${result.columns.join(", ")}.`;
-
-      db.transact([
-        db.tx.messages[id()]
-          .create({ role: "assistant", content: summary, createdAt: Date.now() })
-          .link({ analysis: analysisId }),
-        db.tx.analyses[analysisId].update({
-          updatedAt: Date.now(),
-          summary,
-          status: "complete",
-        }),
-      ]);
-
-      setUploadStatus(result.message);
->>>>>>> Stashed changes
       setUploadFile(null);
+      setCsvFocus("");
     } catch (uploadError) {
-      const message = uploadError instanceof Error ? uploadError.message : "CSV upload failed.";
+      const message =
+        uploadError instanceof Error
+          ? uploadError.message
+          : "CSV upload failed.";
       setUploadStatus(message);
       db.transact(db.tx.analyses[analysisId].update({ status: "error" }));
     } finally {
@@ -300,28 +248,14 @@ export default function AnalysisPage() {
 
   async function handleSimulation(event: FormEvent) {
     event.preventDefault();
-<<<<<<< Updated upstream
     if (!auth.user) {
       return;
     }
     setIsSimulating(true);
     setSimulationStatus("");
-=======
-    if (!auth.user || !prompt.trim()) return;
-    setIsSending(true);
-    setSendError("");
-
-    const now = Date.now();
-    const promptText = prompt.trim();
-    setPrompt("");
-
-    let analysisId = activeId;
-    const txs: Array<any> = [];
->>>>>>> Stashed changes
 
     const analysisId = ensureAnalysis("Scenario simulation");
     if (!analysisId) {
-<<<<<<< Updated upstream
       setIsSimulating(false);
       return;
     }
@@ -344,51 +278,6 @@ export default function AnalysisPage() {
           ? simulationError.message
           : "Simulation failed.";
       setSimulationStatus(message);
-=======
-      analysisId = id();
-      txs.push(
-        db.tx.analyses[analysisId].create({
-          title: promptText.slice(0, 48),
-          createdAt: now,
-          updatedAt: now,
-          status: "in-progress",
-        }),
-      );
-      setActiveId(analysisId);
-    } else {
-      txs.push(db.tx.analyses[analysisId].update({ updatedAt: now, status: "in-progress" }));
-    }
-
-    txs.push(
-      db.tx.messages[id()]
-        .create({ role: "user", content: promptText, createdAt: now })
-        .link({ analysis: analysisId }),
-    );
-
-    db.transact(txs);
-
-    try {
-      const historyPayload = activeMessages.slice(-6).map((message) => ({
-        role: message.role as "user" | "assistant",
-        content: message.content,
-      }));
-
-      const response = await requestTariffAnalysis({ prompt: promptText, history: historyPayload });
-
-      db.transact([
-        db.tx.messages[id()]
-          .create({ role: "assistant", content: response.analysis, createdAt: Date.now() })
-          .link({ analysis: analysisId }),
-        db.tx.analyses[analysisId].update({
-          updatedAt: Date.now(),
-          summary: response.analysis,
-          status: "complete",
-        }),
-      ]);
-    } catch (analysisError) {
-      const message = analysisError instanceof Error ? analysisError.message : "Unable to run analysis.";
-      setSendError(message);
->>>>>>> Stashed changes
       db.transact(db.tx.analyses[analysisId].update({ status: "error" }));
     } finally {
       setIsSimulating(false);
@@ -402,17 +291,12 @@ export default function AnalysisPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-<<<<<<< Updated upstream
             <p className="text-sm uppercase tracking-[0.24em] text-emerald-300">
               TradeShield
             </p>
             <h1 className="text-2xl font-semibold text-zinc-100">
-              AI Analysis Workspace
+              Tariff analysis workspace
             </h1>
-=======
-            <p className="text-sm uppercase tracking-[0.24em] text-emerald-300">TradeShield</p>
-            <h1 className="text-2xl font-semibold text-zinc-100">Tariff analysis workspace</h1>
->>>>>>> Stashed changes
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
             <Link
@@ -450,17 +334,12 @@ export default function AnalysisPage() {
         <main className="grid gap-6 lg:grid-cols-[minmax(0,_260px)_minmax(0,_1fr)]">
           <aside className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-<<<<<<< Updated upstream
               <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
                 Analyses
               </h2>
               <Button size="sm" onClick={() => createNewAnalysis("New analysis")}>
                 New
               </Button>
-=======
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">Analyses</h2>
-              <Button size="sm" onClick={handleNewAnalysis}>New</Button>
->>>>>>> Stashed changes
             </div>
             <div className="space-y-3">
               {analyses.length === 0 ? (
@@ -469,7 +348,6 @@ export default function AnalysisPage() {
                   work.
                 </Card>
               ) : null}
-<<<<<<< Updated upstream
               {analyses.map((analysis) => {
                 const isActive = analysis.id === activeId;
                 return (
@@ -507,49 +385,28 @@ export default function AnalysisPage() {
                   </div>
                 );
               })}
-=======
-              {analyses.map((analysis) => (
-                <div
-                  key={analysis.id}
-                  className={`relative group w-full rounded-lg border px-3 py-3 text-left transition ${
-                    analysis.id === activeId
-                      ? "border-emerald-400/60 bg-emerald-500/10"
-                      : "border-zinc-800/80 bg-zinc-950/70 hover:border-emerald-400/40"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    className="w-full text-left pr-6"
-                    onClick={() => setActiveId(analysis.id)}
-                  >
-                    <p className="text-sm font-semibold text-zinc-100">{analysis.title}</p>
-                    <p className="text-xs text-zinc-400">{new Date(analysis.updatedAt).toLocaleString()}</p>
-                    <p className="mt-2 text-xs text-zinc-500">Status: {analysis.status ?? "draft"}</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteAnalysis(analysis.id);
-                    }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition text-zinc-600 hover:text-red-400 text-xs px-1.5 py-0.5 rounded hover:bg-red-500/10"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
->>>>>>> Stashed changes
             </div>
             <div className="mt-2 rounded-lg border border-zinc-800/80 bg-zinc-950/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">Quick Links</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                Quick Links
+              </p>
               <div className="flex flex-col gap-2">
-                <Link href="/news" className="text-xs text-emerald-400 hover:text-emerald-300">
+                <Link
+                  href="/news"
+                  className="text-xs text-emerald-400 hover:text-emerald-300"
+                >
                   📰 Live tariff news →
                 </Link>
-                <Link href="/tariff-lookup" className="text-xs text-zinc-400 hover:text-zinc-300">
+                <Link
+                  href="/tariff-lookup"
+                  className="text-xs text-zinc-400 hover:text-zinc-300"
+                >
                   🔍 HTS code lookup →
                 </Link>
-                <Link href="/dashboard" className="text-xs text-purple-400 hover:text-purple-300">
+                <Link
+                  href="/dashboard"
+                  className="text-xs text-purple-400 hover:text-purple-300"
+                >
                   📊 Risk dashboard →
                 </Link>
               </div>
@@ -560,7 +417,6 @@ export default function AnalysisPage() {
             <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-<<<<<<< Updated upstream
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                     Active scenario
                   </p>
@@ -617,30 +473,21 @@ export default function AnalysisPage() {
                       ) : null}
                     </div>
                   )}
-=======
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Active scenario</p>
-                  <h2 className="text-xl font-semibold text-zinc-100">
-                    {activeAnalysis?.title ?? "Start a new analysis"}
-                  </h2>
->>>>>>> Stashed changes
                 </div>
                 <div className="text-right text-xs text-zinc-400">
-                  {activeAnalysis ? `Updated ${new Date(activeAnalysis.updatedAt).toLocaleString()}` : ""}
+                  {activeAnalysis
+                    ? `Updated ${new Date(activeAnalysis.updatedAt).toLocaleString()}`
+                    : ""}
                 </div>
               </div>
               {latestSummary ? (
                 <div className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-100">
-<<<<<<< Updated upstream
                   <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">
                     Latest summary
                   </p>
                   <p className="mt-2 text-sm leading-relaxed">
                     {latestSummary}
                   </p>
-=======
-                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Latest AI summary</p>
-                  <p className="mt-2 text-sm leading-relaxed">{latestSummary}</p>
->>>>>>> Stashed changes
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-zinc-400">
@@ -651,15 +498,15 @@ export default function AnalysisPage() {
 
             <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">
               <div className="space-y-4">
-                {isLoading ? <p className="text-sm text-zinc-400">Loading analyses...</p> : null}
-                {error ? <p className="text-sm text-red-400">{error.message}</p> : null}
+                {isLoading ? (
+                  <p className="text-sm text-zinc-400">Loading analyses...</p>
+                ) : null}
+                {error ? (
+                  <p className="text-sm text-red-400">{error.message}</p>
+                ) : null}
                 {activeMessages.length === 0 ? (
                   <p className="text-sm text-zinc-400">
-<<<<<<< Updated upstream
                     Results and AI briefings will appear here after analysis.
-=======
-                    Ask a question about tariff exposure, supplier risk, or landed cost scenarios.
->>>>>>> Stashed changes
                   </p>
                 ) : null}
                 <div className="space-y-3">
@@ -675,7 +522,9 @@ export default function AnalysisPage() {
                       <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                         {message.role === "user" ? "You" : "TradeShield AI"}
                       </p>
-                      <p className="mt-2 whitespace-pre-line">{message.content}</p>
+                      <p className="mt-2 whitespace-pre-line">
+                        {message.content}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -685,45 +534,53 @@ export default function AnalysisPage() {
             <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">
               <form className="space-y-4" onSubmit={handleUploadCsv}>
                 <div className="space-y-2">
-<<<<<<< Updated upstream
                   <label
                     htmlFor="csv-upload"
                     className="block text-sm font-medium text-zinc-200"
                   >
-                    Upload CSV for AI analysis
-=======
-                  <label htmlFor="csv-upload" className="block text-sm font-medium text-zinc-200">
                     Upload CSV for analysis
->>>>>>> Stashed changes
                   </label>
                   <input
                     id="csv-upload"
                     type="file"
                     accept=".csv"
-                    onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      setUploadFile(event.target.files?.[0] ?? null)
+                    }
                     className="block w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/20 file:px-3 file:py-1.5 file:text-emerald-100 hover:file:bg-emerald-500/30"
                   />
                 </div>
-                {uploadStatus ? <p className="text-sm text-zinc-300">{uploadStatus}</p> : null}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="csv-focus"
+                    className="block text-sm font-medium text-zinc-200"
+                  >
+                    Chat Box:
+                  </label>
+                  <textarea
+                    id="csv-focus"
+                    rows={3}
+                    value={csvFocus}
+                    onChange={(event) => setCsvFocus(event.target.value)}
+                    placeholder="Example: prioritize high spend items from CN and highlight exposure over $250k."
+                    className="block w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-50 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70"
+                  />
+                </div>
+                {uploadStatus ? (
+                  <p className="text-sm text-zinc-300">{uploadStatus}</p>
+                ) : null}
                 <div className="flex items-center gap-3">
                   <Button type="submit" disabled={!uploadFile || isUploading}>
-<<<<<<< Updated upstream
                     {isUploading ? "Analyzing..." : "Run CSV analysis"}
                   </Button>
                   <p className="text-xs text-zinc-500">
                     Uses the FastAPI `/analyze` endpoint.
                   </p>
-=======
-                    {isUploading ? "Uploading..." : "Upload CSV"}
-                  </Button>
-                  <p className="text-xs text-zinc-500">We will parse the file and summarize columns + row count.</p>
->>>>>>> Stashed changes
                 </div>
               </form>
             </Card>
 
             <Card className="border-zinc-800/80 bg-zinc-950/70 p-5">
-<<<<<<< Updated upstream
               <form className="space-y-4" onSubmit={handleSimulation}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -828,28 +685,6 @@ export default function AnalysisPage() {
                   <p className="text-xs text-zinc-500">
                     Uses the FastAPI `/simulate` endpoint.
                   </p>
-=======
-              <form className="space-y-4" onSubmit={handleSendPrompt}>
-                <div className="space-y-2">
-                  <label htmlFor="prompt" className="block text-sm font-medium text-zinc-200">
-                    Scenario prompt
-                  </label>
-                  <textarea
-                    id="prompt"
-                    rows={4}
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                    placeholder="Example: Analyze a 15% tariff increase on HS code 8517.62 for imports from CN to the US. Focus on top 20 SKUs and supplier concentration risk."
-                    className="block w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-base text-zinc-50 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:ring-offset-0"
-                  />
-                </div>
-                {sendError ? <p className="text-sm text-red-400">{sendError}</p> : null}
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" disabled={isSending || !prompt.trim()}>
-                    {isSending ? "Running analysis..." : "Run analysis"}
-                  </Button>
-                  <p className="text-xs text-zinc-500">Results are stored privately in your Instant workspace.</p>
->>>>>>> Stashed changes
                 </div>
               </form>
             </Card>
@@ -891,13 +726,63 @@ function buildCsvSummary(results: ProductResult[]) {
     return "CSV processed, but no rows were returned.";
   }
 
-  const top = results.slice(0, 5);
-  const lines = top.map(
-    (row) =>
-      `- ${row.name} (${row.hts_code}, ${row.origin_country}) risk ${row.risk_score}`,
-  );
+  const totalDuty = results.reduce((sum, row) => sum + row.duty_exposure, 0);
+  const byCountry = new Map<string, { spend: number; duty: number; count: number }>();
+  let missingHts = 0;
 
-  return `CSV analysis complete. ${results.length} products analyzed.\nTop results:\n${lines.join(
-    "\n",
-  )}`;
+  for (const row of results) {
+    const country = row.origin_country || "Unknown";
+    const entry = byCountry.get(country) ?? { spend: 0, duty: 0, count: 0 };
+    entry.spend += row.annual_spend;
+    entry.duty += row.duty_exposure;
+    entry.count += 1;
+    byCountry.set(country, entry);
+    if (!row.hts_code) {
+      missingHts += 1;
+    }
+  }
+
+  const topCountries = [...byCountry.entries()]
+    .sort((a, b) => b[1].duty - a[1].duty)
+    .slice(0, 2)
+    .map(([country]) => `${country} → US`);
+
+  const highRisk = results.filter((row) => row.risk_score >= 75).length;
+  const supplierClusters = byCountry.size;
+  const topAdvice = results.find((row) => row.ai_advice)?.ai_advice;
+
+  return [
+    "Scenario: CSV tariff analysis",
+    "Draft",
+    "Blend public schedules, internal SKUs, and supplier exposure to understand where your landed cost is truly at risk.",
+    "",
+    "Projected duty delta",
+    `${formatCurrency(totalDuty)}`,
+    "",
+    "Top impacted lanes",
+    topCountries.length ? topCountries.join(", ") : "N/A",
+    "",
+    "High risk SKUs",
+    String(highRisk),
+    "Single-source + high margin erosion.",
+    "",
+    "Supplier clusters",
+    String(supplierClusters),
+    "Overexposed to single country-of-origin.",
+    "",
+    "Compliance gaps",
+    String(missingHts),
+    "Missing or inconsistent HS assignments.",
+    "",
+    "AI risk summary",
+    topAdvice ||
+      "Tariff exposure is concentrated in a handful of high-spend SKUs. Prioritize HS code validation and diversify origin countries for the most exposed suppliers.",
+  ].join("\n");
+}
+
+function formatCurrency(value: number) {
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${Math.round(value)}`;
 }
